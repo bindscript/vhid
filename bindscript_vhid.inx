@@ -1,0 +1,73 @@
+; bindscript-vhid: a root-enumerated KMDF HID minidriver. The inbox
+; mshidkmdf.sys (build 22000 and later) is the function driver. This
+; driver installs as its lower filter and answers the IOCTL_HID_* queries.
+; stampinf fills DriverVer and KmdfLibraryVersion at build time.
+
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = HIDClass
+ClassGuid   = {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
+Provider    = %ManufacturerName%
+CatalogFile = bindscript_vhid.cat
+DriverVer   =
+PnpLockdown = 1
+
+[Manufacturer]
+%ManufacturerName% = Standard,NT$ARCH$.10.0...22000
+
+; The hardware id spells the VID and PID because the HID child takes its
+; device path from this id, and some games read the VID and PID from that
+; path. It must match BSV_VID and BSV_PID in src/driver.c. PID 0x0001 is
+; the pid.codes test PID and must not ship.
+[Standard.NT$ARCH$.10.0...22000]
+%DeviceName% = Vhid_Install, Root\VID_1209&PID_0001
+
+[SourceDisksFiles]
+bindscript_vhid.sys = 1
+
+[SourceDisksNames]
+1 = %DiskName%
+
+[DestinationDirs]
+Vhid_CopyFiles = 13
+
+[Vhid_Install.NT]
+CopyFiles = Vhid_CopyFiles
+Include   = MsHidKmdf.inf
+Needs     = MsHidKmdf.NT
+
+[Vhid_Install.NT.HW]
+Include = MsHidKmdf.inf
+Needs   = MsHidKmdf.NT.HW
+
+[Vhid_Install.NT.Services]
+Include    = MsHidKmdf.inf
+Needs      = MsHidKmdf.NT.Services
+AddService = bindscript_vhid, 0, Vhid_ServiceInstall
+
+[Vhid_Install.NT.Filters]
+AddFilter = bindscript_vhid,, Vhid_FilterInstall
+
+[Vhid_FilterInstall]
+FilterPosition = Lower
+
+[Vhid_ServiceInstall]
+DisplayName   = %DeviceName%
+ServiceType   = 1
+StartType     = 3
+ErrorControl  = 1
+ServiceBinary = %13%\bindscript_vhid.sys
+
+[Vhid_Install.NT.Wdf]
+KmdfService = bindscript_vhid, Vhid_wdfsect
+
+[Vhid_wdfsect]
+KmdfLibraryVersion = $KMDFVERSION$
+
+[Vhid_CopyFiles]
+bindscript_vhid.sys
+
+[Strings]
+ManufacturerName = "bindscript"
+DeviceName       = "Bindscript Virtual Controller"
+DiskName         = "Bindscript vhid installation disk"
